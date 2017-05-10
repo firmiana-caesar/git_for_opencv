@@ -1,0 +1,67 @@
+#include <iostream>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/core.hpp>
+
+using namesapce std;
+using namespace cv;
+
+int main()
+{
+	//以下六行定义用于检测的颜色的HSV值
+	int iLowH = 0;
+	int iHighH = 10;
+	int iLowS = 43;
+	int iHighS = 255;
+	int iLowV = 46;
+	int iHighV = 255;
+
+	//定义图片存储
+	Mat imgOriginal = imread(path);
+	Mat imgHSV;
+
+	//用向量存储经过HSV处理的图片
+	vector<Mat> hsvSplit;
+	cvtColor(imgOriginal, imgHsv, COLOR_BGR2HSV);
+
+	//通道分离并处理
+	split(imgHSV, hsvSplit);
+	equalizedHist(hsvSplit[2], hsvSplit[2]);
+	merge(hsvSplit, imgHSV);
+	Mat imgThresholded;
+	
+	//颜色分离
+	inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded);
+
+	//开操作(去除一些噪点)
+	Mat element = getStructuringElement(MORPH_RECT, Size(3,3));
+	morphologyEx(imgThresholded, imgThresholded, MORPH_OPEN, element);
+
+	//闭操作（连接一些连通域）
+	morphologyEx(imgThresholded, imgThresholded, MORPH_CLOSE, element);
+
+	//进行膨胀操作；i的值根据光照条件进行改变
+	for(int i = 0; i < 3; i++)
+	{
+		dilate(imgThresholded, imgThresholded, element);
+	}
+
+	vector<vector<Point>> contours;
+	findContours(imgThresholded, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE)；
+	vector<vector<Point>>::const_iterator itContours = contours.begin();
+	
+	Mat result(imgThresholded.size(), CV_8U, Scalar(255));
+	drawContours(result, contours, -1, Scalar(0), 2);
+	
+	imshow("Contours", result);
+	
+	Mat original = imread(path);
+	drawContours(original, contours, -1, Scalar(255,255,255), -1);
+	
+	imshow("Contours on Original", original);
+
+	waitKey(0);
+
+	return 0;
+}
+		 
